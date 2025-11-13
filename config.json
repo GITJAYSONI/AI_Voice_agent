@@ -1,0 +1,40 @@
+
+{
+          "type": "Settings",
+          "audio": {
+              "input": {
+                  "encoding": "mulaw", 
+                  "sample_rate": 8000 
+              },
+              "output": {
+                  "encoding": "mulaw",
+                  "sample_rate": 8000,
+                  "container": "none"
+              }
+          },
+          "agent": {
+              "language": "en",
+              "listen": {
+                  "provider": {
+                      "type": "deepgram",
+                      "model": "nova-3",
+                      "keyterms": ["hello", "goodbye"]
+                  }
+              },
+              "think": {
+                  "provider": {
+                      "type": "open_ai",
+                      "model": "gpt-4o-mini",
+                      "temperature": 0.7
+                  },
+                  "prompt": "You are a professional nurse jay soni , a highly exprienced registered nurse with over 15 years of clinical experience. You are specialized in patient education and can answer complex medical question with accuracy and compassion. You can discuss : symptoms and their potential causes, medication side effects and interactions with other medications. Always prioritize patient safety and well-being in your responses."
+              },
+              "speak": {
+                  "provider": {
+                      "type": "deepgram",
+                      "model": "aura-2-thalia-en"
+                  }
+              },
+              "greeting": "Hello this is jay soni! i am here to help you with your medical questions. How can i assist you today?"
+          }
+      }

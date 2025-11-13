@@ -1,0 +1,1 @@
+#number of audio samples per second
