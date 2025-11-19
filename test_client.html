@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voice Agent Test Client</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 600px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    h1 {
+      color: #667eea;
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .status {
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      text-align: center;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    .status.disconnected {
+      background: #fee;
+      color: #c33;
+    }
+
+    .status.connecting {
+      background: #ffeaa7;
+      color: #d63031;
+    }
+
+    .status.connected {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .button {
+      width: 100%;
+      padding: 15px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-bottom: 15px;
+    }
+
+    .button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .button.primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .button.danger {
+      background: #e74c3c;
+      color: white;
+    }
+
+    .button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .logs {
+      background: #f8f9fa;
+      border-radius: 10px;
+      padding: 15px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      margin-top: 20px;
+    }
+
+    .log-entry {
+      padding: 5px 0;
+      border-bottom: 1px solid #dee2e6;
+    }
+
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+
+    .log-time {
+      color: #6c757d;
+      margin-right: 10px;
+    }
+
+    .info-box {
+      background: #e7f3ff;
+      border-left: 4px solid #2196F3;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+
+    .info-box p {
+      margin: 5px 0;
+      font-size: 14px;
+      color: #333;
+    }
+
+    .tips {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 15px;
+      border-radius: 5px;
+      margin-top: 20px;
+    }
+
+    .tips h3 {
+      color: #856404;
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+
+    .tips ul {
+      margin-left: 20px;
+      color: #856404;
+    }
+
+    .tips li {
+      margin: 5px 0;
+      font-size: 13px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🎙️ Voice Agent Test</h1>
+    <p class="subtitle">Test your AI voice agent in the browser</p>
+
+    <div class="info-box">
+      <p><strong>🤖 Agent:</strong> Dr. Jay Soni (Medical AI)</p>
+      <p><strong>🌐 Server:</strong> localhost:5000</p>
+    </div>
+
+    <div id="status" class="status disconnected">
+      Disconnected
+    </div>
+
+    <button id="callBtn" class="button primary" onclick="startCall()">
+      📞 Start Call
+    </button>
+
+    <button id="hangupBtn" class="button danger" onclick="endCall()" disabled>
+      📴 Hang Up
+    </button>
+
+    <div class="tips">
+      <h3>💡 Tips for Testing:</h3>
+      <ul>
+        <li>Speak clearly and wait for the AI to respond</li>
+        <li>Try: "What are the symptoms of a cold?"</li>
+        <li>Try: "Can you explain what causes fever?"</li>
+        <li>Wait 2-3 seconds after speaking for the response</li>
+      </ul>
+    </div>
+
+    <div class="logs" id="logs">
+      <div class="log-entry">
+        <span class="log-time">Ready</span>
+        <span>Click "Start Call" to begin testing</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let ws = null;
+    let audioContext = null;
+    let streamSid = null;
+    let audioQueue = [];
+    let isPlaying = false;
+    let playbackContext = null;
+    let mediaStream = null;
+
+    function log(message) {
+      const logs = document.getElementById('logs');
+      const time = new Date().toLocaleTimeString();
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.innerHTML = `<span class="log-time">${time}</span><span>${message}</span>`;
+      logs.appendChild(entry);
+      logs.scrollTop = logs.scrollHeight;
+    }
+
+    function updateStatus(status, text) {
+      const statusEl = document.getElementById('status');
+      statusEl.className = `status ${status}`;
+      statusEl.textContent = text;
+    }
+
+    async function startCall() {
+      try {
+        log('🎤 Requesting microphone access...');
+
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        });
+
+        log('✅ Microphone access granted');
+        updateStatus('connecting', 'Connecting...');
+
+        ws = new WebSocket('ws://localhost:5000/media-stream');
+
+        ws.onopen = () => {
+          log('✅ Connected to voice agent');
+          updateStatus('connected', 'Connected - Listening...');
+
+          streamSid = 'test-stream-' + Date.now();
+
+          const startEvent = {
+            event: 'start',
+            start: {
+              streamSid: streamSid,
+              accountSid: 'test',
+              callSid: 'test-' + Date.now()
+            }
+          };
+          ws.send(JSON.stringify(startEvent));
+
+          setTimeout(() => {
+            ws.send(JSON.stringify({ event: 'connected' }));
+          }, 100);
+
+          document.getElementById('callBtn').disabled = true;
+          document.getElementById('hangupBtn').disabled = false;
+
+          startAudioStream(mediaStream);
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.event === 'media' && data.media && data.media.payload) {
+              playAudio(data.media.payload);
+            } else if (data.event === 'clear') {
+              log('🔇 Interrupted');
+              audioQueue = [];
+              isPlaying = false;
+            }
+          } catch (e) {
+            // Ignore non-JSON messages
+          }
+        };
+
+        ws.onerror = () => {
+          log('❌ Connection error');
+          updateStatus('disconnected', 'Error');
+        };
+
+        ws.onclose = () => {
+          log('📴 Disconnected');
+          updateStatus('disconnected', 'Disconnected');
+          cleanup();
+        };
+
+      } catch (error) {
+        log('❌ Error: ' + error.message);
+        updateStatus('disconnected', 'Error');
+        cleanup();
+      }
+    }
+
+    function startAudioStream(stream) {
+      audioContext = new AudioContext({ sampleRate: 8000 });
+      const source = audioContext.createMediaStreamSource(stream);
+      const processor = audioContext.createScriptProcessor(2048, 1, 1);
+
+      source.connect(processor);
+      processor.connect(audioContext.destination);
+
+      processor.onaudioprocess = (e) => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          const inputData = e.inputBuffer.getChannelData(0);
+          const mulaw = convertToMulaw(inputData);
+
+          const mediaEvent = {
+            event: 'media',
+            streamSid: streamSid,
+            media: {
+              track: 'inbound',
+              payload: btoa(String.fromCharCode.apply(null, mulaw))
+            }
+          };
+          ws.send(JSON.stringify(mediaEvent));
+        }
+      };
+    }
+
+    function convertToMulaw(samples) {
+      const mulaw = new Uint8Array(samples.length);
+      for (let i = 0; i < samples.length; i++) {
+        mulaw[i] = linearToMulaw(samples[i] * 32768);
+      }
+      return mulaw;
+    }
+
+    function linearToMulaw(sample) {
+      const MULAW_MAX = 0x1FFF;
+      const MULAW_BIAS = 33;
+      let sign = (sample < 0) ? 0x80 : 0;
+      if (sign) sample = -sample;
+      if (sample > MULAW_MAX) sample = MULAW_MAX;
+      sample += MULAW_BIAS;
+      let exponent = 7;
+      for (let exp = 256; exp > 0; exp >>= 1) {
+        if (sample < exp) exponent--;
+        else break;
+      }
+      let mantissa = (sample >> (exponent + 3)) & 0x0F;
+      return ~(sign | (exponent << 4) | mantissa);
+    }
+
+    function playAudio(base64Audio) {
+      try {
+        const binary = atob(base64Audio);
+        const mulawBytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          mulawBytes[i] = binary.charCodeAt(i);
+        }
+
+        const pcmSamples = new Float32Array(mulawBytes.length);
+        for (let i = 0; i < mulawBytes.length; i++) {
+          pcmSamples[i] = mulawToLinear(mulawBytes[i]) / 32768.0;
+        }
+
+        audioQueue.push(pcmSamples);
+
+        if (!isPlaying) {
+          playNextAudio();
+        }
+      } catch (error) {
+        log('❌ Audio error: ' + error.message);
+      }
+    }
+
+    function mulawToLinear(mulawByte) {
+      mulawByte = ~mulawByte;
+      const sign = (mulawByte & 0x80);
+      const exponent = (mulawByte >> 4) & 0x07;
+      const mantissa = mulawByte & 0x0F;
+      let sample = ((mantissa << 3) + 0x84) << exponent;
+      if (sign) sample = -sample;
+      return sample;
+    }
+
+    function playNextAudio() {
+      if (audioQueue.length === 0) {
+        isPlaying = false;
+        return;
+      }
+
+      isPlaying = true;
+      const samples = audioQueue.shift();
+
+      if (!playbackContext) {
+        playbackContext = new AudioContext({ sampleRate: 8000 });
+      }
+
+      const buffer = playbackContext.createBuffer(1, samples.length, 8000);
+      buffer.getChannelData(0).set(samples);
+
+      const source = playbackContext.createBufferSource();
+      source.buffer = buffer;
+      source.connect(playbackContext.destination);
+      source.onended = () => playNextAudio();
+      source.start();
+    }
+
+    function cleanup() {
+      document.getElementById('callBtn').disabled = false;
+      document.getElementById('hangupBtn').disabled = true;
+
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+        mediaStream = null;
+      }
+
+      if (audioContext) {
+        audioContext.close();
+        audioContext = null;
+      }
+
+      if (playbackContext) {
+        playbackContext.close();
+        playbackContext = null;
+      }
+
+      audioQueue = [];
+      isPlaying = false;
+    }
+
+    function endCall() {
+      if (ws) {
+        ws.send(JSON.stringify({ event: 'stop', streamSid: streamSid }));
+        ws.close();
+        ws = null;
+      }
+      log('📴 Call ended');
+      cleanup();
+    }
+  </script>
+</body>
+
+</html>

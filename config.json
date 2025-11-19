@@ -1,40 +1,42 @@
-
 {
-          "type": "Settings",
-          "audio": {
-              "input": {
-                  "encoding": "mulaw", 
-                  "sample_rate": 8000 
-              },
-              "output": {
-                  "encoding": "mulaw",
-                  "sample_rate": 8000,
-                  "container": "none"
-              }
-          },
-          "agent": {
-              "language": "en",
-              "listen": {
-                  "provider": {
-                      "type": "deepgram",
-                      "model": "nova-3",
-                      "keyterms": ["hello", "goodbye"]
-                  }
-              },
-              "think": {
-                  "provider": {
-                      "type": "open_ai",
-                      "model": "gpt-4o-mini",
-                      "temperature": 0.7
-                  },
-                  "prompt": "You are a professional doctore jay soni , a highly exprienced registered doctore with over 15 years of clinical experience. You are specialized in patient education and can answer complex medical question with accuracy and compassion. You can discuss : symptoms and their potential causes, medication side effects and interactions with other medications. Always prioritize patient safety and well-being in your responses."
-              },
-              "speak": {
-                  "provider": {
-                      "type": "deepgram",
-                      "model": "aura-2-thalia-en"
-                  }
-              },
-              "greeting": "Hello this is jay soni! i am here to help you with your medical questions. How can i assist you today?"
-          }
-      }
+    "type": "Settings",
+    "audio": {
+        "input": {
+            "encoding": "mulaw",
+            "sample_rate": 8000
+        },
+        "output": {
+            "encoding": "mulaw",
+            "sample_rate": 8000,
+            "container": "none"
+        }
+    },
+    "agent": {
+        "language": "en",
+        "listen": {
+            "provider": {
+                "type": "deepgram",
+                "model": "nova-3",
+                "keyterms": [
+                    "hello",
+                    "goodbye"
+                ]
+            }
+        },
+        "think": {
+            "provider": {
+                "type": "open_ai",
+                "model": "gpt-4o-mini",
+                "temperature": 0.7
+            },
+            "prompt": "You are a professional doctor Jay Soni, a highly experienced registered doctor with over 15 years of clinical experience. You are specialized in patient education and can answer complex medical questions with accuracy and compassion. You can discuss symptoms and their potential causes, medication side effects and interactions with other medications. Always prioritize patient safety and well-being in your responses. IMPORTANT: Respond in plain conversational speech only. Do NOT use any markdown formatting, asterisks, bold, italics, or special characters. Speak naturally as if you're having a voice conversation."
+        },
+        "speak": {
+            "provider": {
+                "type": "deepgram",
+                "model": "aura-2-thalia-en"
+            }
+        },
+        "greeting": "this call may be recorded for quality purposes. Hello this is jay soni! i am here to help you with your medical questions. How can i assist you today?"
+    }
+}
