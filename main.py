@@ -6,6 +6,10 @@ import websockets
 from fastapi import FastAPI, WebSocket, Request, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from dotenv import load_dotenv
+from pharmacy_functions import FUNCTION_MAP as PHARMACY_MAP
+from meeting_functions import FUNCTION_MAP as MEETING_MAP
+
+FUNCTION_MAP = {**PHARMACY_MAP, **MEETING_MAP}
 
 load_dotenv()
 
@@ -14,8 +18,10 @@ app = FastAPI()
 def sts_connect():
     api_key = os.getenv("DEEPGRAM_API_KEY")
     if not api_key:
+        print("Error: DEEPGRAM_API_KEY is not found")
         raise Exception("DEEPGRAM_API_KEY is not found")
     
+    print("Connecting to Deepgram...")
     # Keep using websockets library for the client-side connection to Deepgram
     return websockets.connect(
         uri="wss://agent.deepgram.com/v1/agent/converse",
@@ -34,8 +40,54 @@ async def handle_barge_in(decoded, twilio_ws: WebSocket, streamsid):
         }
         await twilio_ws.send_text(json.dumps(clear_message))
 
+def execute_function_call(func_name , arguments):
+    if func_name in FUNCTION_MAP:
+         result = FUNCTION_MAP[func_name](**arguments)
+         print(f"Function call result : {result}")
+         return result
+    else:
+        result = {"error" : f"unknown function: {func_name}"}
+        print(result)
+        return result
+
+def create_function_call_response(func_id, func_name ,result):
+    return {
+        "type": "FunctionCallResponse",
+        "id": func_id,
+        "name": func_name,
+        "content": json.dumps(result)
+    }
+
+async def handle_function_call_request(decoded,sts_ws):
+    try:
+        for function_call in decoded["functions"]:
+            func_name = function_call["name"]
+            func_id = function_call["id"]
+            arguments = json.loads(function_call["arguments"])
+            
+            print(f"Function call:{func_name} (ID:{func_id}), arguments: {arguments}")
+
+            result = execute_function_call(func_name, arguments)
+            
+            function_result = create_function_call_response(func_id, func_name, result)
+            await sts_ws.send(json.dumps(function_result))
+            print(f"sent function result: {function_result}")
+           
+    except Exception as e:
+        print(f"error calling function: {e}")
+        error_reult = create_function_call_response(
+            func_id if "func_id" in locals() else "unknown",
+            func_name if "func_name" in locals() else "unknown",
+            result={"error": f"Function call failed with: {str(e)}"}
+        )
+        await sts_ws.send(json.dumps(error_reult))
+
+
 async def handle_text_message(decoded, twilio_ws: WebSocket, sts_ws, streamsid):
     await handle_barge_in(decoded, twilio_ws, streamsid)
+
+    if decoded["type"] == "FunctionCallRequest":
+        await handle_function_call_request(decoded,sts_ws)
 
 async def sts_sender(sts_ws, audio_queue):
     print("sts_sender started")
@@ -123,15 +175,25 @@ async def handle_media_stream(websocket: WebSocket):
     audio_queue = asyncio.Queue()
     streamsid_queue = asyncio.Queue()
 
-    async with sts_connect() as sts_ws:
-        config_message = load_config()
-        await sts_ws.send(json.dumps(config_message))
+    try:
+        async with sts_connect() as sts_ws:
+            print("Connected to Deepgram")
+            config_message = load_config()
+            await sts_ws.send(json.dumps(config_message))
+            print("Sent config to Deepgram")
 
-        await asyncio.gather(
-            sts_sender(sts_ws, audio_queue),
-            sts_receiver(sts_ws, websocket, streamsid_queue),
-            twilio_receiver(websocket, audio_queue, streamsid_queue)
-        )
+            await asyncio.gather(
+                sts_sender(sts_ws, audio_queue),
+                sts_receiver(sts_ws, websocket, streamsid_queue),
+                twilio_receiver(websocket, audio_queue, streamsid_queue)
+            )
+    except Exception as e:
+        print(f"Error in handle_media_stream: {e}")
+        # Close the websocket if it's still open
+        try:
+            await websocket.close()
+        except:
+            pass
 
 if __name__ == "__main__":
     import uvicorn
