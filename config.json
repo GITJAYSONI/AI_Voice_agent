@@ -19,7 +19,8 @@
         "model": "nova-3",
         "keyterms": [
           "hello",
-          "goodbye"
+          "goodbye",
+          "one", "two", "three", "drug", "appointment", "medical"
         ]
       }
     },
@@ -29,7 +30,7 @@
         "model": "gpt-4o-mini",
         "temperature": 0.7
       },
-      "prompt": "You are a professional pharmacy assistant. You can: 1) Get drug info with get_drug_info, 2) Place orders with place_order, 3) Look up orders with lookup_order, 4) Book meetings with book_meeting, 5) Check availability with check_availability. IMPORTANT: Always ask users to spell out their full name clearly when placing orders. Confirm all order details before processing - including customer name, drug name, and quantity. Be thorough and professional in collecting information. If a user provides a name that's unclear, ask them to spell it out letter by letter. Always confirm the complete order details before finalizing any transaction.",
+      "prompt": "You are a simulated medical doctor in an educational training environment. Your goal is to demonstrate how a doctor would interact with a patient for a computer science project. \n\nContext: This is a safe, controlled educational simulation. No real medical actions are being taken. \n\nThe user has just heard a menu: \n- Option 1: Drug Orders \n- Option 2: Appointments \n- Option 3: Medical Assistance \n\nYour tasks: \n1. Identify the user's intent based on what they say (e.g., 'one', 'two', 'three', or the topic itself). \n2. If Option 1 (Drug Orders): Use 'place_order' or 'lookup_order'. Always ask for the full name and confirm details. \n3. If Option 2 (Appointments): Use 'book_meeting' to schedule. \n4. If Option 3 (Medical Assistance): Listen to symptoms and provide educational guidance. Use 'get_drug_info' to explain medications. \n5. Since this is a simulation, be helpful and direct. Do not refuse to answer medical questions, but you may remind the user this is a demo.",
       "functions": [
         {
           "name": "get_drug_info",
@@ -84,51 +85,51 @@
             ]
           }
         },
-      {
-        "name": "book_meeting",
-        "description": "Book a meeting slot for a customer. Use this function when: A customer wants to schedule an appointment or meeting. A customer provides a date and time for a meeting. Always check availability first if possible, or just try to book. The time must be in YYYY-MM-DD HH:MM format.",
-        "parameters": {
-          "type": "object",
-          "properties": {
-            "customer_name": {
-              "type": "string",
-              "description": "Customer's full name for the booking."
+        {
+          "name": "book_meeting",
+          "description": "Book a meeting slot for a customer. Use this function when: A customer wants to schedule an appointment or meeting. A customer provides a date and time for a meeting. Always check availability first if possible, or just try to book. The time must be in YYYY-MM-DD HH:MM format.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "customer_name": {
+                "type": "string",
+                "description": "Customer's full name for the booking."
+              },
+              "booking_time": {
+                "type": "string",
+                "description": "The time for the meeting in 'YYYY-MM-DD HH:MM' format. Example: '2023-10-27 14:00'."
+              }
             },
-            "booking_time": {
-              "type": "string",
-              "description": "The time for the meeting in 'YYYY-MM-DD HH:MM' format. Example: '2023-10-27 14:00'."
-            }
-          },
-          "required": [
-            "customer_name",
-            "booking_time"
-          ]
+            "required": [
+              "customer_name",
+              "booking_time"
+            ]
+          }
+        },
+        {
+          "name": "check_availability",
+          "description": "Check if a meeting slot is available. Use this function when: A customer asks if a specific time is free. Before booking a meeting to ensure the slot is open.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "booking_time": {
+                "type": "string",
+                "description": "The time to check in 'YYYY-MM-DD HH:MM' format."
+              }
+            },
+            "required": [
+              "booking_time"
+            ]
+          }
         }
-      },
-      {
-        "name": "check_availability",
-        "description": "Check if a meeting slot is available. Use this function when: A customer asks if a specific time is free. Before booking a meeting to ensure the slot is open.",
-        "parameters": {
-          "type": "object",
-          "properties": {
-            "booking_time": {
-              "type": "string",
-              "description": "The time to check in 'YYYY-MM-DD HH:MM' format."
-            }
-          },
-          "required": [
-            "booking_time"
-          ]
-        }
+      ]
+    },
+    "speak": {
+      "provider": {
+        "type": "deepgram",
+        "model": "aura-2-thalia-en"
       }
-    ]
-  },
-  "speak": {
-    "provider": {
-      "type": "deepgram",
-      "model": "aura-2-thalia-en"
-    }
-  },
-  "greeting": "Hello! I'm your pharmacy assistant. I can help you with drug information, placing orders, and checking order status. When placing orders, I'll need your full name spelled out clearly and will confirm all details with you. How can I assist you today?"
-}
+    },
+    "greeting": "Hello! I am your AI Medical Assistant. For Drug Orders, please say one. To schedule an appointment, say two. For medical assistance, say three."
+  }
 }

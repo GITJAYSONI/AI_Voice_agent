@@ -102,6 +102,7 @@ async def sts_receiver(sts_ws, twilio_ws: WebSocket, streamsid_queue):
     async for message in sts_ws:
         if type(message) is str:
             decoded = json.loads(message)
+            print(f"Received message type: {decoded.get('type')}")
             await handle_text_message(decoded, twilio_ws, sts_ws, streamsid)
             continue
         
